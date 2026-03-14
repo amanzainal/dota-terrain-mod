@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub mod utils {
     use regex::Regex;
     use std::error::Error;
@@ -9,11 +10,11 @@ pub mod utils {
     #[cfg(target_os = "windows")]
     use winreg::RegKey;
 
-    #[derive(Debug)]
-    pub(crate) enum TMError {
+    #[derive(Debug, Clone)]
+    pub enum TMError {
         SteamNotFound,
         DotaNotFound,
-        InternalError(std::io::Error),
+        InternalError(String),
     }
 
     impl Display for TMError {
@@ -21,8 +22,8 @@ pub mod utils {
             match self {
                 TMError::SteamNotFound => write!(f, "Dota-Terrain-Mod error: Steam not found"),
                 TMError::DotaNotFound => write!(f, "Dota-Terrain-Mod error: Dota not found"),
-                TMError::InternalError(io_err) => {
-                    write!(f, "Dota-Terrain-Mod error: Internal error: {}", io_err)
+                TMError::InternalError(msg) => {
+                    write!(f, "Dota-Terrain-Mod error: Internal error: {}", msg)
                 }
             }
         }
@@ -32,17 +33,18 @@ pub mod utils {
 
     /// Object representing a dota installation. Exists to encapsulate the paths and identify
     /// if `dota_path` cannot be found
+    #[derive(Clone)]
     pub struct Dota {
-        pub(crate) dota_path: PathBuf,
-        pub(crate) base_path: Option<PathBuf>,
-        pub(crate) target_path: Option<PathBuf>,
-        pub(crate) out_path: Option<PathBuf>,
+        pub dota_path: PathBuf,
+        pub base_path: Option<PathBuf>,
+        pub target_path: Option<PathBuf>,
+        pub out_path: Option<PathBuf>,
     }
 
     impl Dota {
         /// On initialization of a `Dota` instance, tries to locate the dota installation and
         /// sets the attribute accordingly
-        pub(crate) fn new() -> Result<Self, TMError> {
+        pub fn new() -> Result<Self, TMError> {
             let steam_path = get_steam_path()?;
             let libtext = load_libraries(steam_path)?;
             let dota_path = get_dota_path(libtext)?;
@@ -58,7 +60,7 @@ pub mod utils {
         /// Using the `dota_path` which is assumed to exist if this function is called,
         /// populate the other attributes by creating the paths to the base `dota.vpk`,
         /// the given target terrain vpk, and the file path where the output vpk will be written
-        pub(crate) fn build_paths(&mut self, target: &str) {
+        pub fn build_paths(&mut self, target: &str) {
             let dota_path = &self.dota_path;
             let base_path = get_base_path(dota_path);
             let target_path = get_target_path(dota_path, target);
@@ -89,10 +91,7 @@ pub mod utils {
         let homedir = match std::env::var("HOME") {
             Ok(home) => PathBuf::from(home),
             Err(err) => {
-                return Err(TMError::InternalError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    err,
-                )))
+                return Err(TMError::InternalError(err.to_string()))
             }
         };
         let steam_path =
@@ -131,7 +130,7 @@ pub mod utils {
                             let lib_path_str = path.as_str();
                             let lib_path = Path::new(lib_path_str)
                                 .canonicalize()
-                                .map_err(TMError::InternalError)?;
+                                .map_err(|e| TMError::InternalError(e.to_string()))?;
                             Ok(lib_path
                                 .join("steamapps")
                                 .join("common")
@@ -165,7 +164,7 @@ pub mod utils {
         dota_path.join("dota").join("maps").join(target)
     }
 
-    pub(crate) fn pause() {
+    pub fn pause() {
         std::io::stdin().read(&mut [0_u8]).unwrap();
     }
 }
