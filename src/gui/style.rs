@@ -157,3 +157,52 @@ pub fn card_button_style(_theme: &Theme, _status: button::Status) -> button::Sty
         shadow: Shadow::default(),
     }
 }
+
+// Sidebar styles
+
+pub fn sidebar_style(_theme: &Theme) -> container::Style {
+    container::Style {
+        background: Some(Background::Color(Color::from_rgb(0.10, 0.10, 0.13))),
+        border: Border {
+            color: Color::from_rgb(0.20, 0.20, 0.25),
+            width: 1.0,
+            radius: 0.0.into(),
+        },
+        shadow: Shadow::default(),
+        text_color: None,
+    }
+}
+
+pub fn tab_button_style(_theme: &Theme, status: button::Status) -> button::Style {
+    let base = button::Style {
+        background: Some(Background::Color(Color::TRANSPARENT)),
+        text_color: Color::from_rgb(0.55, 0.55, 0.60),
+        border: Border {
+            color: Color::TRANSPARENT,
+            width: 0.0,
+            radius: 4.0.into(),
+        },
+        shadow: Shadow::default(),
+    };
+    match status {
+        button::Status::Hovered => button::Style {
+            background: Some(Background::Color(Color::from_rgb(0.15, 0.15, 0.20))),
+            text_color: Color::from_rgb(0.80, 0.80, 0.85),
+            ..base
+        },
+        _ => base,
+    }
+}
+
+pub fn active_tab_button_style(_theme: &Theme, _status: button::Status) -> button::Style {
+    button::Style {
+        background: Some(Background::Color(Color::from_rgb(0.16, 0.12, 0.12))),
+        text_color: Color::from_rgb(0.95, 0.95, 0.95),
+        border: Border {
+            color: Color::from_rgb(0.83, 0.18, 0.18),
+            width: 2.0,
+            radius: 4.0.into(),
+        },
+        shadow: Shadow::default(),
+    }
+}

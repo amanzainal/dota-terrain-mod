@@ -410,6 +410,56 @@ fn patch_vpk(
     target
 }
 
+/// Scan a VPK file's index and return all file paths without loading file data.
+/// This is efficient for large VPKs like pak01_dir.vpk (~3GB) since only the
+/// header and tree are parsed.
+pub fn scan_vpk_index(vpk_path: PathBuf) -> Vec<String> {
+    let mut vpk = VPK::new(vpk_path);
+    vpk.read_header();
+    vpk.populate_index();
+    vpk.index.keys().cloned().collect()
+}
+
+/// Extract files from a VPK whose paths match any of the given prefixes.
+/// Only loads file data for matching paths, avoiding full VPK load.
+pub fn extract_files_by_prefix(
+    vpk_path: PathBuf,
+    prefixes: &[&str],
+) -> HashMap<String, Vec<u8>> {
+    let mut vpk = VPK::new(vpk_path);
+    vpk.read_header();
+    vpk.populate_index();
+
+    let matching_keys: Vec<String> = vpk
+        .index
+        .keys()
+        .filter(|path| prefixes.iter().any(|p| path.starts_with(p)))
+        .cloned()
+        .collect();
+
+    let mut result = HashMap::new();
+    for key in matching_keys {
+        if let Some(meta) = vpk.index.get(&key) {
+            let file_length = meta.file_length + u32::from(meta.preload_length);
+            vpk.data.set_position(meta.archive_offset.into());
+            let mut buf = vec![0u8; file_length as usize];
+            vpk.data.read_exact(&mut buf).unwrap();
+            result.insert(key, buf);
+        }
+    }
+    result
+}
+
+/// Remap a file path by replacing a source prefix with a destination prefix.
+pub fn remap_path(path: &str, source_prefixes: &[&str], dest_prefix: &str) -> String {
+    for prefix in source_prefixes {
+        if path.starts_with(prefix) {
+            return format!("{}{}", dest_prefix, &path[prefix.len()..]);
+        }
+    }
+    path.to_string()
+}
+
 /// Unpacks the base terrain (`dota.vpk`) given as `base_path` and the custom terrain given
 /// as `target_path`. Unpacking occurs in parallel via multi-processing.
 /// Patches the the target file with the base data in `dota.vpk`
